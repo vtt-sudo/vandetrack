@@ -5,12 +5,22 @@
   /* ---------- Theme (dark / light) ---------- */
   var root = document.documentElement;
   var toggle = document.getElementById('themeToggle');
+  /* Keep responsive WebP sources in sync with the existing light/dark logo fallback. */
+  function syncBrandLogo(t) {
+    var lg = document.querySelector('.brand-logo');
+    if (!lg) return;
+    var dark = t === 'dark';
+    var picture = lg.closest ? lg.closest('picture.vt-media') : null;
+    var source = picture ? picture.querySelector('source[type="image/webp"]') : null;
+    var responsive = lg.getAttribute(dark ? 'data-logo-dark-srcset' : 'data-logo-light-srcset');
+    if (source && responsive) source.setAttribute('srcset', responsive);
+    lg.src = dark ? 'assets/img/logo-dark.png' : 'assets/img/logo.png';
+  }
   function applyTheme(t) {
     root.setAttribute('data-theme', t);
     try { localStorage.setItem('vt-theme', t); } catch (e) {}
     if (toggle) toggle.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
-    var lg = document.querySelector('.brand-logo');
-    if (lg) lg.src = t === 'dark' ? 'assets/img/logo-dark.png' : 'assets/img/logo.png';
+    syncBrandLogo(t);
   }
   if (toggle) {
     toggle.addEventListener('click', function () {
@@ -20,10 +30,7 @@
     toggle.setAttribute('aria-pressed', cur === 'dark' ? 'true' : 'false');
   }
   /* sync logo variant with the theme set by the head script */
-  (function () {
-    var lg = document.querySelector('.brand-logo');
-    if (lg && root.getAttribute('data-theme') === 'dark') lg.src = 'assets/img/logo-dark.png';
-  })();
+  syncBrandLogo(root.getAttribute('data-theme'));
 
   /* ---------- Mobile nav ---------- */
   var navToggle = document.querySelector('.nav-toggle');
@@ -44,8 +51,13 @@
   /* ---------- Header shadow on scroll ---------- */
   var header = document.querySelector('.site-header');
   if (header) {
+    var wasScrolled = null;
     var onScroll = function () {
-      header.classList.toggle('scrolled', window.scrollY > 8);
+      var scrolled = window.scrollY > 8;
+      if (scrolled !== wasScrolled) {
+        header.classList.toggle('scrolled', scrolled);
+        wasScrolled = scrolled;
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -97,14 +109,19 @@
     function sweep() {
       ticking = false;
       var vh = window.innerHeight;
+      /* Read all geometry first, then write classes; avoid per-element layout thrashing. */
+      var revealNow = [];
       pending = pending.filter(function (el) {
         if (el.classList.contains('in')) return false;
         if (el.getBoundingClientRect().top < vh) {
-          el.classList.add('in');
-          io.unobserve(el);
+          revealNow.push(el);
           return false;
         }
         return true;
+      });
+      revealNow.forEach(function (el) {
+        el.classList.add('in');
+        io.unobserve(el);
       });
     }
     window.addEventListener('scroll', function () {
@@ -214,19 +231,28 @@
   var navLinks = nav ? Array.prototype.slice.call(nav.querySelectorAll(':scope > a')) : [];
   var activeLink = nav ? nav.querySelector('a.active') : null;
 
+  var pillTransitionFrame = 0;
   function placePill(el, animate) {
     if (!pill || !el || window.innerWidth <= 980) return;
-    if (!animate) {
-      pill.style.transition = 'none';
+    /* Measure before changing any styles. Never force a synchronous post-write layout. */
+    var left = el.offsetLeft;
+    var width = el.offsetWidth;
+    if (pillTransitionFrame) {
+      cancelAnimationFrame(pillTransitionFrame);
+      pillTransitionFrame = 0;
     }
-    pill.style.left = el.offsetLeft + 'px';
-    pill.style.width = el.offsetWidth + 'px';
+    pill.style.transition = animate ? '' : 'none';
+    pill.style.left = left + 'px';
+    pill.style.width = width + 'px';
     pill.style.opacity = '1';
     nav.classList.add('nav-pill-on');
     if (!animate) {
-      /* force reflow so the next move animates */
-      void pill.offsetWidth;
-      pill.style.transition = '';
+      pillTransitionFrame = requestAnimationFrame(function () {
+        pillTransitionFrame = requestAnimationFrame(function () {
+          pill.style.transition = '';
+          pillTransitionFrame = 0;
+        });
+      });
     }
   }
 
@@ -260,8 +286,13 @@
       });
     });
 
+    var pillResizeFrame = 0;
     window.addEventListener('resize', function () {
-      if (activeLink) placePill(activeLink, false);
+      if (pillResizeFrame) return;
+      pillResizeFrame = requestAnimationFrame(function () {
+        pillResizeFrame = 0;
+        if (activeLink) placePill(activeLink, false);
+      });
     });
   }
 

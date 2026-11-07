@@ -132,7 +132,9 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-img { max-width: 100%; display: block; }
+img { max-width: 100%; height: auto; display: block; }
+/* The picture element adds format selection, not an extra layout box. */
+picture.vt-media { display: contents; }
 a { color: inherit; }
 h1, h2, h3, h4 {
   font-family: var(--font-display);
@@ -1197,15 +1199,25 @@ section > .statbar { margin: 34px 0 42px; }
 /* ——— big certificate band (statbar style) ——— */
 .certbar .container { gap: 18px; }
 .cert-item {
+  min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-decoration: none; color: inherit; padding: 6px 4px; border-radius: 14px;
   transition: transform 0.25s ease, background 0.25s ease;
 }
 a.cert-item:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.05); }
-.cert-logo {
-  height: 52px; width: auto; background: #fff; border-radius: 10px;
+/* Padding belongs to a frame, not the image: narrow grids must not squash a logo. */
+.cert-logo-frame {
+  display: grid; place-items: center;
+  width: calc(var(--cert-logo-width) + 26px); height: 52px;
+  max-width: 100%; min-width: 0; flex: 0 0 auto;
   padding: 6px 13px; margin-bottom: 10px;
+  background: #fff; border-radius: 10px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+}
+.cert-logo {
+  display: block; width: 100%; height: auto;
+  max-width: 100%; max-height: 40px; object-fit: contain;
+  margin: 0; padding: 0;
 }
 /* cert band: logos BIG, text small (user brief) */
 .certbar .stat b {
@@ -1749,4 +1761,5 @@ h2, h3 { font-weight: 800; }
 @media (prefers-reduced-motion: reduce) {
   .road-strip .sky-day { opacity: 0; }
   .road-strip .sky-night { opacity: 1; }
+  .road-strip .sky-sunset { opacity: 0; }
 }

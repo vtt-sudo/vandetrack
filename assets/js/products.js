@@ -4,6 +4,19 @@
 
   var WA = '918238707442';
 
+  /* Replaced with only the catalogue's responsive image map during npm run build. */
+  var IMAGE_ASSETS = /* @build-image-assets */ {};
+  var PRODUCT_SIZES = '(max-width: 640px) calc(100vw - 88px), (max-width: 980px) calc((100vw - 132px) / 2), (min-width: 1600px) 380px, 330px';
+  function productImage(p) {
+    var media = IMAGE_ASSETS[p.img];
+    var width = media ? media.width : 900;
+    var height = media ? media.height : 600;
+    var alt = p.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    var image = '<img src="' + p.img + '" alt="' + alt + '" width="' + width + '" height="' + height + '" loading="lazy" decoding="async">';
+    if (!media) return image;
+    return '<picture class="vt-media"><source type="image/webp" srcset="' + media.srcset + '" sizes="' + PRODUCT_SIZES + '">' + image + '</picture>';
+  }
+
   var PRODUCTS = [
     { id: 'vt140', name: 'VandeTrack VT-140 (AIS-140)', cat: 'ais140', img: 'assets/img/prod-ais140.jpg',
       badge: 'Govt. Approved', badgeClass: 'green',
@@ -74,7 +87,7 @@
     return '' +
       '<article class="card pcard" id="p-' + p.id + '" data-cat="' + p.cat + '">' +
         badge +
-        '<div class="pimg"><img src="' + p.img + '" alt="' + p.name + '" loading="lazy"></div>' +
+        '<div class="pimg">' + productImage(p) + '</div>' +
         '<div class="pbody">' +
           '<h3>' + p.name + '</h3>' +
           '<p class="pdesc">' + p.desc + '</p>' +
